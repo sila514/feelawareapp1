@@ -1,0 +1,2083 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FeelAware - Duygusal Farkındalık Uygulaması</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+            transition: background 0.3s ease;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body.dark-mode .container {
+            background: #2d2d44;
+            color: #e0e0e0;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .settings-btn {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            transition: background 0.3s;
+        }
+
+        .settings-btn:hover {
+            background: rgba(255,255,255,0.5);
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Initial Setup Screen */
+        .setup-section {
+            text-align: center;
+        }
+
+        .setup-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        body.dark-mode .setup-section h2 {
+            color: #9db4ff;
+        }
+
+        body.dark-mode #consentScreen .setup-section p {
+            color: #d0d0d0;
+        }
+
+        body.dark-mode #consentScreen label span {
+            color: #e0e0e0 !important;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        body.dark-mode .form-group label {
+            color: #e0e0e0;
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            color: #333;
+            cursor: pointer;
+        }
+
+        body.dark-mode .form-group select {
+            background: #3d3d54;
+            color: #e0e0e0;
+            border-color: #555;
+        }
+
+        /* Mood Selection */
+        .mood-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .mood-btn {
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        body.dark-mode .mood-btn {
+            background: #3d3d54;
+            border-color: #555;
+            color: #e0e0e0;
+        }
+
+        .mood-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .mood-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* Scale Questions */
+        .scale-container {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        body.dark-mode .scale-container {
+            background: #3d3d54;
+        }
+
+        .scale-container h3 {
+            color: #667eea;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        body.dark-mode .scale-container h3 {
+            color: #9db4ff;
+        }
+
+        .question-text {
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        body.dark-mode .question-text {
+            color: #d0d0d0;
+        }
+
+        .likert-options {
+            display: flex;
+            justify-content: space-between;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .likert-btn {
+            flex: 1;
+            padding: 10px 5px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+            color: #333;
+        }
+
+        body.dark-mode .likert-btn {
+            background: #2d2d44;
+            border-color: #555;
+            color: #e0e0e0;
+        }
+
+        .likert-btn:hover {
+            background: #e8eaf6;
+        }
+
+        body.dark-mode .likert-btn:hover {
+            background: #4d4d64;
+        }
+
+        .likert-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        body.dark-mode .btn-secondary {
+            background: #3d3d54;
+            color: #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        body.dark-mode .btn-secondary:hover {
+            background: #4d4d64;
+        }
+
+        /* Results Screen */
+        .result-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .result-score-wrapper {
+            position: relative;
+            z-index: 1;
+        }
+
+        .result-emoji {
+            font-size: 48px;
+            margin-bottom: 15px;
+            animation: bounceIn 0.6s ease;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .result-card h2 {
+            font-size: 42px;
+            margin-bottom: 8px;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .result-card p {
+            font-size: 16px;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+            font-weight: 500;
+        }
+
+        .result-level-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.25);
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+
+        .feedback-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 18px;
+            border-left: 5px solid #667eea;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .feedback-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        body.dark-mode .feedback-section {
+            background: #3d3d54;
+            border-left-color: #9db4ff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .feedback-section h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        body.dark-mode .feedback-section h3 {
+            color: #9db4ff;
+        }
+
+        .feedback-section p {
+            color: #555;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        body.dark-mode .feedback-section p {
+            color: #d0d0d0;
+        }
+
+        .feedback-section p strong {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        body.dark-mode .feedback-section p strong {
+            color: #9db4ff;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .detail-item {
+            background: rgba(102, 126, 234, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        body.dark-mode .detail-item {
+            background: rgba(157, 180, 255, 0.1);
+        }
+
+        .detail-label {
+            font-size: 11px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        body.dark-mode .detail-value {
+            color: #9db4ff;
+        }
+
+        /* Dashboard */
+        .dashboard-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        body.dark-mode .dashboard-tabs {
+            border-bottom-color: #555;
+        }
+
+        .tab-btn {
+            padding: 10px 15px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #999;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        body.dark-mode .tab-btn.active {
+            color: #9db4ff;
+            border-bottom-color: #9db4ff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        body.dark-mode .history-item {
+            background: #3d3d54;
+        }
+
+        .history-item-info {
+            flex: 1;
+        }
+
+        .history-item-mood {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        body.dark-mode .history-item-mood {
+            color: #9db4ff;
+        }
+
+        .history-item-date {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .history-item-score {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        /* Settings Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        body.dark-mode .modal-content {
+            background: #2d2d44;
+            color: #e0e0e0;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .settings-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        body.dark-mode .settings-section {
+            border-bottom-color: #555;
+        }
+
+        .settings-section:last-child {
+            border-bottom: none;
+        }
+
+        .settings-section h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        body.dark-mode .settings-section h3 {
+            color: #9db4ff;
+        }
+
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        body.dark-mode .settings-item {
+            border-bottom-color: #3d3d54;
+        }
+
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 28px;
+            background: #ccc;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #667eea;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            left: 24px;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+            margin-top: 10px;
+        }
+
+        body.dark-mode .info-box {
+            background: #3d3d54;
+            color: #b0b0b0;
+        }
+
+        .info-box strong {
+            color: #667eea;
+        }
+
+        body.dark-mode .info-box strong {
+            color: #9db4ff;
+        }
+
+        .data-stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .data-stats h4 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .data-stats p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+            margin-bottom: 25px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        body.dark-mode .chart-container {
+            background: #3d3d54;
+        }
+
+        .chart-title {
+            text-align: center;
+            color: #667eea;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        body.dark-mode .chart-title {
+            color: #9db4ff;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        body.dark-mode .empty-state {
+            color: #888;
+        }
+
+        .ethical-warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #856404;
+        }
+
+        body.dark-mode .ethical-warning {
+            background: #664d00;
+            border-left-color: #ffc107;
+            color: #ffd700;
+        }
+
+        .btn-download {
+            background: #4caf50;
+            color: white;
+            margin-top: 8px;
+        }
+
+        .btn-download:hover {
+            background: #45a049;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+            margin-top: 8px;
+        }
+
+
+
+        .dev-contact a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .dev-contact a:hover {
+            text-decoration: underline;
+        }
+
+        .btn-danger:hover {
+            background: #da190b;
+        }
+
+        .btn-inline {
+            border: none;
+            background: rgba(102,126,234,0.12);
+            color: #667eea;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-inline:hover {
+            background: rgba(102,126,234,0.20);
+        }
+
+        body.dark-mode .btn-inline {
+            background: rgba(157,180,255,0.14);
+            color: #9db4ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="settings-btn" onclick="openSettings()">⚙️</button>
+            <h1>FeelAware</h1>
+            <p>Duygusal Farkındalık Uygulaması</p>
+        </div>
+
+        <div class="content">
+            <!-- Initial Setup Screen -->
+            <div class="screen active" id="setupScreen">
+                <div class="ethical-warning">
+                    <strong>⚠️ Prototip Uyarısı:</strong> Bu uygulama eğitim amaçlı bir prototipdir. Klinik tanı koymaz ve profesyonel psikolojik danışmanlığın yerine geçmez.
+                </div>
+                <div class="setup-section">
+                    <h2>Hoş Geldiniz!</h2>
+                    <p style="color: #666; margin-bottom: 20px;">Lütfen başlamadan önce bilgilerinizi girin.</p>
+
+                    <div class="form-group">
+                    <label>Yaş Aralığı</label>
+                    <select id="ageRange" onchange="validateSetup()">
+                    <option value="">Seçiniz...</option>
+                    <option value="13-17">13-17</option>
+                    <option value="18-25">18-25</option>
+                    <option value="26-35">26-35</option>
+                    <option value="36-50">36-50</option>
+                    <option value="50+">50+</option>
+                    </select>
+                    </div>
+
+                    <div class="form-group">
+                    <label>Cinsiyet</label>
+                    <select id="gender" onchange="validateSetup()">
+                    <option value="">Seçiniz...</option>
+                    <option value="Erkek">Erkek</option>
+                    <option value="Kadın">Kadın</option>
+                    <option value="Diğer">Diğer</option>
+                    <option value="Belirtmek İstemiyorum">Belirtmek İstemiyorum</option>
+                    </select>
+                    </div>
+
+                    <div class="form-group">
+                    <label>Medeni Hal</label>
+                    <select id="maritalStatus" onchange="validateSetup()">
+                    <option value="">Seçiniz...</option>
+                    <option value="Bekar">Bekar</option>
+                    <option value="İlişkisi Var">İlişkisi Var</option>
+                    <option value="Evli">Evli</option>
+                    <option value="Boşanmış">Boşanmış</option>
+                    <option value="Dul">Dul</option>
+                    <option value="Belirtmek İstemiyorum">Belirtmek İstemiyorum</option>
+                    </select>
+                    </div>
+
+                    <div class="form-group">
+                    <label>Yaşadığı Bölge</label>
+                    <select id="region" onchange="validateSetup()">
+                    <option value="">Seçiniz...</option>
+                    <option value="Marmara">Marmara</option>
+                    <option value="Ege">Ege</option>
+                    <option value="Akdeniz">Akdeniz</option>
+                    <option value="İç Anadolu">İç Anadolu</option>
+                    <option value="Karadeniz">Karadeniz</option>
+                    <option value="Doğu Anadolu">Doğu Anadolu</option>
+                    <option value="Güneydoğu Anadolu">Güneydoğu Anadolu</option>
+                    </select>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="startApp()" id="startBtn" disabled>Başla</button>
+                </div>
+            </div>
+
+            <!-- Mood Selection Screen -->
+            <div class="screen" id="moodScreen">
+                <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;">Şu anda nasıl hissediyorsunuz?</h2>
+                <div class="mood-grid">
+                    <button class="mood-btn" onclick="selectMood('Kaygılı')">😰 Kaygılı</button>
+                    <button class="mood-btn" onclick="selectMood('Üzgün')">😢 Üzgün</button>
+                    <button class="mood-btn" onclick="selectMood('Stresli')">😤 Stresli</button>
+                    <button class="mood-btn" onclick="selectMood('Motive')">🚀 Motive</button>
+                    <button class="mood-btn" onclick="selectMood('Duygusal Karışıklık')">😕 Duygusal Karışıklık</button>
+                    <button class="mood-btn" onclick="selectMood('Sakin')">😌 Sakin</button>
+                </div>
+                <button class="btn btn-secondary" onclick="goToDashboard()">Panele Dön</button>
+            </div>
+
+            <!-- Scale Questions Screen -->
+            <div class="screen" id="scaleScreen">
+                <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;" id="scaleTitle"></h2>
+                <div id="scalesContainer"></div>
+                <button class="btn btn-primary" onclick="submitScales()">Sonuçları Gör</button>
+                <button class="btn btn-secondary" onclick="goToMoodSelection()">Geri Dön</button>
+            </div>
+
+            <!-- Consent Screen (Onay Ekranı) -->
+            <div class="screen" id="consentScreen">
+                <div class="ethical-warning">
+                    <strong>📊 Veri Paylaşımı Onayı</strong>
+                </div>
+                <div class="setup-section">
+                    <h2>Değerlendirme Tamamlandı!</h2>
+                    <p style="color: #666; margin-bottom: 20px; text-align: left; line-height: 1.6;">
+                    Bu uygulamada doldurduğunuz ölçeklere ait yanıtlar, araştırma ve istatistik amaçlı olarak 
+                    <strong>anonim bir şekilde</strong> kayıt altına alınacaktır. Verileriniz, yalnızca bu amaçlarla 
+                    kullanılacak ve kimliğiniz doğrudan tespit edilemeyecek şekilde saklanacaktır.
+                    </p>
+                    <p style="color: #666; margin-bottom: 20px; text-align: left; line-height: 1.6;">
+                    Anketi tamamladıktan sonra aşağıdaki onay kutusunu işaretleyip 
+                    <strong>"Okudum, Anladım, Onaylıyorum"</strong> butonuna bastığınızda, yanıtlarınız 
+                    güvenli bir şekilde Google Sheets tablosuna aktarılacaktır. Onay vermediğiniz sürece 
+                    verileriniz kaydedilmeyecektir.
+                    </p>
+
+                    <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <label style="display: flex; align-items: flex-start; cursor: pointer; margin-bottom: 15px;">
+                    <input type="radio" name="consentOption" id="consentFull" value="full" checked style="margin-right: 10px; margin-top: 4px; width: 18px; height: 18px; cursor: pointer;" />
+                    <span style="color: #333; font-size: 14px; line-height: 1.5;">
+                    Açıklamayı okudum, anladım ve yanıtlarımın anonim olarak Google Sheets'e 
+                    kaydedilmesini onaylıyorum.
+                    </span>
+                    </label>
+                    <label style="display: flex; align-items: flex-start; cursor: pointer;">
+                    <input type="radio" name="consentOption" id="consentLocal" value="local" style="margin-right: 10px; margin-top: 4px; width: 18px; height: 18px; cursor: pointer;" />
+                    <span style="color: #333; font-size: 14px; line-height: 1.5;">
+                    Verilerimin Google Sheets'e gönderilmesini istemiyorum, sadece bu cihazda (yerel) saklansın.
+                    </span>
+                    </label>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="submitWithConsent()" id="consentButton">
+                    ✅ Seçimi Onayla ve Devam Et
+                    </button>
+
+                    <p id="consentStatusMessage" style="font-size: 0.9em; margin-top: 12px; text-align: center; font-weight: 600;"></p>
+                </div>
+            </div>
+
+            <!-- Results Screen -->
+            <div class="screen" id="resultScreen">
+                <div class="result-card">
+                    <h2 id="resultScore"></h2>
+                    <p id="resultLevel"></p>
+                </div>
+
+                <div id="feedbackContainer"></div>
+
+                <button class="btn btn-primary" onclick="generatePDF()">📄 PDF Rapor İndir</button>
+                <button class="btn btn-secondary" onclick="goToDashboard()">Panele Dön</button>
+            </div>
+
+            <!-- Dashboard Screen -->
+            <div class="screen" id="dashboardScreen">
+                <div class="dashboard-tabs">
+                    <button class="tab-btn active" onclick="switchTab('overview')">Özet</button>
+                    <button class="tab-btn" onclick="switchTab('history')">Geçmiş</button>
+                    <button class="tab-btn" onclick="switchTab('charts')">Grafikler</button>
+                </div>
+
+                <div class="tab-content active" id="overviewTab">
+                    <div id="overviewContent"></div>
+                    <button class="btn btn-primary" onclick="goToMoodSelection()">Yeni Değerlendirme</button>
+                </div>
+
+                <div class="tab-content" id="historyTab">
+                    <div id="historyContent"></div>
+                </div>
+
+                <div class="tab-content" id="chartsTab">
+                    <div id="chartsContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ayarlar</h2>
+                <button class="close-btn" onclick="closeSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- Profile Section -->
+                <div class="settings-section">
+                    <h3>👤 Profil Bilgileri</h3>
+                    <div class="settings-item">
+                    <span>Yaş Aralığı: <strong id="profileAge">-</strong></span>
+                    <button class="btn-inline" onclick="changeProfileField('ageRange')">Değiştir</button>
+                    </div>
+                    <div class="settings-item">
+                    <span>Cinsiyet: <strong id="profileGender">-</strong></span>
+                    <button class="btn-inline" onclick="changeProfileField('gender')">Değiştir</button>
+                    </div>
+                    <div class="settings-item">
+                    <span>Medeni Hal: <strong id="profileMaritalStatus">-</strong></span>
+                    <button class="btn-inline" onclick="changeProfileField('maritalStatus')">Değiştir</button>
+                    </div>
+                    <div class="settings-item">
+                    <span>Bölge: <strong id="profileRegion">-</strong></span>
+                    <button class="btn-inline" onclick="changeProfileField('region')">Değiştir</button>
+                    </div>
+                    <div class="info-box">
+                    <strong>Not:</strong> Profil bilgilerinizi burada güncellediğinizde değerlendirme verileriniz silinmez.
+                    </div>
+                </div>
+
+                <!-- Theme Section -->
+                <div class="settings-section">
+                    <h3>🎨 Tema</h3>
+                    <div class="settings-item">
+                    <span>Koyu Mod</span>
+                    <div class="toggle-switch" id="darkModeToggle" onclick="toggleDarkMode()"></div>
+                    </div>
+                </div>
+
+                <!-- Data Overview -->
+                <div class="settings-section">
+                    <h3>📊 Kayıtlı Veriler</h3>
+                    <div class="data-stats">
+                    <h4 id="totalRecords">0</h4>
+                    <p>Toplam Değerlendirme</p>
+                    </div>
+                    <div id="moodDistribution"></div>
+                    <div class="info-box">
+                    <strong>📌 Veri İçeriği:</strong> Her değerlendirme kaydı şunları içerir: Tarih-saat, duygu durumu, her soruya verilen ham cevaplar (1-5 arası Likert puanları), toplam puan, seviye (Düşük/Orta/Yüksek), ve motivasyonel geri bildirim metni.
+                    </div>
+                </div>
+
+                <!-- Data Management -->
+                <div class="settings-section">
+                    <h3>💾 Veri Yönetimi ve İndirme</h3>
+                    <div class="info-box">
+                    <strong>🔬 Akademik Kullanım:</strong> İndirdiğiniz dosyalar, araştırma ve akademik çalışmalarda kullanılmak üzere tüm ham verileri içerir. JSON formatı Python/R ile, CSV formatı Excel/SPSS ile açılabilir. Tüm veriler anonim ve sadece bu cihazda saklanır.
+                    </div>
+                    <button class="btn btn-download" onclick="exportJSON()">📥 JSON Formatında İndir</button>
+                    <button class="btn btn-download" onclick="exportCSV()">📥 CSV Formatında İndir (Excel/SPSS)</button>
+                    <button class="btn btn-danger" onclick="clearAllData()">🗑️ Tüm Verileri Sil</button>
+                </div>
+
+                <!-- Privacy Policy -->
+                <div class="settings-section">
+                    <h3>🔒 Gizlilik Politikası</h3>
+                    <div class="info-box">
+                    <strong>Veri Gizliliği:</strong> Bu uygulama tamamen anonim çalışır. Hiçbir kişisel bilgi (ad, e-posta, telefon) toplanmaz. Yalnızca yaş aralığı ve cinsiyet bilgisi cihazınızda yerel olarak saklanır.<br><br>
+                    <strong>Saklanan Veriler:</strong> Yaş aralığı, cinsiyet, değerlendirme tarihi-saati, seçilen duygu durumu, her soruya verilen 1-5 arası cevaplar, hesaplanan puan ve seviye, geri bildirim metni.<br><br>
+                    <strong>Veri Güvenliği:</strong> Tüm veriler şifreli ve sadece sizin cihazınızda bulunur. Hiçbir veri sunucuya gönderilmez veya üçüncü taraflarla paylaşılmaz.
+                    </div>
+                </div>
+
+                <!-- Profile Reset -->
+                <div class="settings-section">
+                    <button class="btn btn-danger" onclick="resetProfile()">Profili Sıfırla</button>
+                    <div class="info-box">
+                    <strong>Not:</strong> Profil sıfırlama; yaş/cinsiyet/medeni hal/bölge ve tüm değerlendirme kayıtlarını bu cihazdan siler.
+                    </div>
+                </div>
+
+                
+                <!-- Developer Contact -->
+                <div class="settings-section">
+                    <h3>✉️ Geliştirici İletişim</h3>
+                    <div class="info-box dev-contact">
+                        <div style="padding: 10px; font-weight: 700; color: #333;">Sıla ATALAY<br><span id="mail1"></span></div>
+                        <div style="padding: 10px; font-weight: 700; color: #333;">Emre Eren ATALAY<br><span id="mail2"></span></div>
+                    </div>
+                </div>
+                <script>
+                    document.getElementById('mail1').textContent = 'silaatalay' + '1306' + '@' + 'gmail.com';
+                    document.getElementById('mail2').textContent = 'emreerenatalay' + '66' + '@' + 'gmail.com';
+                </script>
+
+                <!-- About App -->
+                <div class="settings-section">
+                    <h3>ℹ️ Uygulama Hakkında</h3>
+                    <div class="info-box">
+                    <strong>FeelAware v5.0</strong><br>
+                    Duygusal farkındalık ve öz-değerlendirme için tasarlanmış eğitim amaçlı bir prototip uygulamadır. Psikoloji öğrencileri ve araştırmacılar tarafından kullanılmak üzere geliştirilmiştir.<br><br>
+                    <strong>Yasal Uyarı:</strong> Bu uygulama klinik tanı koymaz, tedavi önerileri sunmaz ve profesyonel psikolojik danışmanlığın yerine geçmez. Ciddi psikolojik sorunlar yaşıyorsanız lütfen bir uzman danışmanla iletişime geçiniz.<br><br>
+                    <strong>Geliştirici Notu:</strong> Bu prototip TÜBİTAK projesi kapsamında YBS öğrencisi ve Psikoloji Öğrencisi tarafından geliştirilmiştir.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Structure
+        const scales = {
+            'Kaygılı': [
+                {
+                    name: 'Yaygın Anksiyete Ölçeği (Örnek)',
+                    items: [
+                    'Endişeli hissediyorum',
+                    'Kontrol edemediğim şeyler hakkında kaygı duyuyorum',
+                    'Çoğu zaman gergin hissediyorum',
+                    'Kötü bir şey olacağından korkuyorum',
+                    'Rahat olamıyorum',
+                    'Konsantre olmakta zorluk çekiyorum'
+                    ]
+                },
+                {
+                    name: 'Panik Belirtileri (Örnek)',
+                    items: [
+                    'Kalp atışlarımda hızlanma hissediyorum',
+                    'Nefes almakta zorluk çekiyorum',
+                    'Baş dönmesi yaşıyorum',
+                    'Titremeler hissediyorum',
+                    'Terleme problemi yaşıyorum',
+                    'Boğulma hissi yaşıyorum'
+                    ]
+                },
+                {
+                    name: 'Sosyal Kaygı (Örnek)',
+                    items: [
+                    'İnsanlar önünde konuşmaktan korkuyorum',
+                    'Yargılanmaktan endişe duyuyorum',
+                    'Sosyal durumlardan kaçınıyorum',
+                    'Başkalarının beni izlemesinden rahatsız oluyorum',
+                    'Utanç duyma korkusu yaşıyorum',
+                    'Yeni insanlarla tanışmaktan çekiniyorum'
+                    ]
+                }
+            ],
+            'Üzgün': [
+                {
+                    name: 'Depresyon Belirtileri (Örnek)',
+                    items: [
+                    'Kendimi mutsuz hissediyorum',
+                    'Hiçbir şeyden zevk almıyorum',
+                    'Umutsuz hissediyorum',
+                    'Kendime karşı olumsuz düşüncelerim var',
+                    'Enerji eksikliği yaşıyorum',
+                    'Uyku sorunları yaşıyorum'
+                    ]
+                },
+                {
+                    name: 'Duygusal Tükenme (Örnek)',
+                    items: [
+                    'Duygusal olarak tükenmiş hissediyorum',
+                    'Motivasyon kaybı yaşıyorum',
+                    'Sosyal ilişkilerden uzaklaşıyorum',
+                    'Kendimi değersiz hissediyorum',
+                    'Gelecek hakkında karamsar düşünüyorum',
+                    'Yalnızlık hissediyorum'
+                    ]
+                },
+                {
+                    name: 'Kayıp ve Yas (Örnek)',
+                    items: [
+                    'Kaybettiğim şey hakkında düşünüyorum',
+                    'Duygusal ağrı yaşıyorum',
+                    'Kabul etmekte zorluk çekiyorum',
+                    'Suçluluk hissediyorum',
+                    'Öfke hissediyorum',
+                    'Yalnız hissediyorum'
+                    ]
+                }
+            ],
+            'Stresli': [
+                {
+                    name: 'Stres Tepkileri (Örnek)',
+                    items: [
+                    'Fiziksel olarak gergin hissediyorum',
+                    'Baş ağrısı yaşıyorum',
+                    'Kas ağrıları hissediyorum',
+                    'Sinirli ve asabi hissediyorum',
+                    'Konsantre olmakta zorluk çekiyorum',
+                    'Sabırsız hissediyorum'
+                    ]
+                },
+                {
+                    name: 'İş/Akademik Stres (Örnek)',
+                    items: [
+                    'İş/okul yükü beni eziyor',
+                    'Zaman baskısı hissediyorum',
+                    'Başarısız olma korkusu yaşıyorum',
+                    'Beklentiler altında eziliyorum',
+                    'Motivasyon kaybı yaşıyorum',
+                    'Aşırı yüklü hissediyorum'
+                    ]
+                },
+                {
+                    name: 'Yaşam Stresörleri (Örnek)',
+                    items: [
+                    'İlişki sorunları yaşıyorum',
+                    'Mali kaygılar taşıyorum',
+                    'Sağlık endişeleri yaşıyorum',
+                    'Aile sorunları var',
+                    'Belirsizlik beni rahatsız ediyor',
+                    'Kontrol kaybı hissediyorum'
+                    ]
+                }
+            ],
+            'Motive': [
+                {
+                    name: 'Motivasyon Seviyeleri (Örnek)',
+                    items: [
+                    'Hedeflerime ulaşmak için istekli hissediyorum',
+                    'Enerjik ve dinamik hissediyorum',
+                    'Yeni şeyler öğrenmeye istekliyim',
+                    'Zorlukları aşmaya hazırım',
+                    'Kendime güvenim var',
+                    'Başarı için çalışmaya istekliyim'
+                    ]
+                },
+                {
+                    name: 'Kişisel Gelişim (Örnek)',
+                    items: [
+                    'Kendimi geliştirmek istiyorum',
+                    'Yeni beceriler öğrenmekten heyecanlanıyorum',
+                    'Potansiyelimi kullanmak istiyorum',
+                    'Zorlukları fırsat olarak görüyorum',
+                    'Başarılarımdan gurur duyuyorum',
+                    'Gelecek hakkında iyimser hissediyorum'
+                    ]
+                },
+                {
+                    name: 'Yaşam Doyumu (Örnek)',
+                    items: [
+                    'Hayatımdan memnunum',
+                    'Anlamlı bir yaşam yaşıyorum',
+                    'Amaçlarım var',
+                    'İlişkilerimden memnunum',
+                    'Kendimi değerli hissediyorum',
+                    'Gelecekten umutluyum'
+                    ]
+                }
+            ],
+            'Duygusal Karışıklık': [
+                {
+                    name: 'Duygusal Dengesizlik (Örnek)',
+                    items: [
+                    'Duygularımı kontrol edemiyorum',
+                    'Ani duygu değişiklikleri yaşıyorum',
+                    'Duygularımı anlamakta zorluk çekiyorum',
+                    'Aşırı tepkiler veriyorum',
+                    'Duygusal olarak istikrarsız hissediyorum',
+                    'Duygularımı ifade etmekte zorluk çekiyorum'
+                    ]
+                },
+                {
+                    name: 'Kimlik Belirsizliği (Örnek)',
+                    items: [
+                    'Kendimi tanımakta zorluk çekiyorum',
+                    'Değerlerim hakkında emin değilim',
+                    'Yaşam yönümü bilmiyorum',
+                    'Kimliğim hakkında karışık hissediyorum',
+                    'Kararlar almakta zorluk çekiyorum',
+                    'Kendimi kaybolmuş hissediyorum'
+                    ]
+                },
+                {
+                    name: 'İlişki Karışıklığı (Örnek)',
+                    items: [
+                    'İlişkilerimde belirsizlik var',
+                    'Başkalarını anlamakta zorluk çekiyorum',
+                    'Bağlanma sorunları yaşıyorum',
+                    'Güven sorunları var',
+                    'Sınırları belirlemekte zorluk çekiyorum',
+                    'Sosyal ilişkilerimde karışıklık yaşıyorum'
+                    ]
+                }
+            ],
+            'Sakin': [
+                {
+                    name: 'Rahatlık ve Huzur (Örnek)',
+                    items: [
+                    'Kendimi rahat hissediyorum',
+                    'Zihinsel olarak sakin hissediyorum',
+                    'Fiziksel olarak gevşek hissediyorum',
+                    'İç huzuru yaşıyorum',
+                    'Dengeli hissediyorum',
+                    'Barışçıl hissediyorum'
+                    ]
+                },
+                {
+                    name: 'Farkındalık ve Mevcudiyet (Örnek)',
+                    items: [
+                    'Şu ana odaklanabiliyorum',
+                    'Çevremde farkındalığım var',
+                    'Meditasyona benzer bir durum yaşıyorum',
+                    'Zihinsel açıklık hissediyorum',
+                    'Bağlantılı hissediyorum',
+                    'Varlığımın farkındayım'
+                    ]
+                },
+                {
+                    name: 'Yaşam Tatmini (Örnek)',
+                    items: [
+                    'Hayatımdan memnunum',
+                    'Şükran hissediyorum',
+                    'Anlamlı bir yaşam yaşıyorum',
+                    'Bağlantılı hissediyorum',
+                    'Amaçlı hissediyorum',
+                    'Mutlu hissediyorum'
+                    ]
+                }
+            ]
+        };
+
+        const feedbackTexts = {
+            'Kaygılı': {
+                'Low': '🌟 Harika! Kaygı seviyeleriniz düşük. Endişelerinizi iyi yönetebiliyor görünüyorsunuz. Bunu sürdürmek için günlük meditasyon veya derin nefes egzersizleri yapabilirsiniz. Kendinize güvenin ve ileriye bakın!',
+                'Medium': '💪 Kaygı seviyeleriniz orta düzeyde. Bu normal ve yaygındır. Kaygıyı yönetmek için: (1) Nefes egzersizleri yapın, (2) Fiziksel aktivite artırın, (3) Uyku düzeninizi iyileştirin, (4) Endişelerinizi yazın. Kademeli olarak iyileşeceksiniz!',
+                'High': '🤝 Kaygı seviyeleriniz yüksek. Bu zor bir dönem geçiriyor olabilirsiniz. Lütfen: (1) Profesyonel yardım almayı düşünün, (2) Stres yönetimi tekniklerini öğrenin, (3) Sosyal destek arayın, (4) Fiziksel aktivite yapın. Siz güçlüsünüz ve bu geçecek!'
+            },
+            'Üzgün': {
+                'Low': '✨ Çok iyi! Duygusal durumunuz olumlu. Bu duyguyu korumak için sevdiklerinizle zaman geçirin, hobi yapın ve kendinize iyi bakın. Mutluluğunuzu paylaşın!',
+                'Medium': '🌈 Biraz üzüntü hissediyorsunuz. Bu doğal bir duygudur. Kendinize şefkat gösterin, sevdiklerinizle konuşun, aktiviteler yapın. Zaman içinde iyileşeceksiniz. Kendinize inanın!',
+                'High': '💙 Ciddi bir üzüntü yaşıyor görünüyorsunuz. Bu önemli bir sinyaldir. Lütfen: (1) Güvendiğiniz birine anlatın, (2) Profesyonel destek arayın, (3) Kendinize şefkat gösterin, (4) Günlük rutinler oluşturun. Siz değerlisiniz ve bu geçecek!'
+            },
+            'Stresli': {
+                'Low': '🎯 Stres seviyeleriniz düşük! Harika bir durumdaysınız. Bu dengeyi korumak için düzenli egzersiz yapın, yeterli uyku alın ve sınırlar belirleyin. Başarılı olduğunuz için kendinizi kutlayın!',
+                'Medium': '⚡ Orta düzey stres yaşıyorsunuz. Bu yönetilebilir. Deneyin: (1) Zaman yönetimi iyileştirin, (2) Kısa molalar verin, (3) Fiziksel aktivite yapın, (4) Sosyal destek alın. Adım adım ilerleyin!',
+                'High': '🛡️ Yüksek stres altındasınız. Acil olarak: (1) Stres kaynağını belirleyin, (2) Profesyonel yardım alın, (3) Kendinize zaman ayırın, (4) Sağlıklı yaşam alışkanlıkları geliştirin. Siz bu durumdan çıkabilirsiniz!'
+            },
+            'Motive': {
+                'Low': '🌱 Motivasyon eksikliği yaşıyorsunuz. Bu geçici olabilir. Deneyin: (1) Küçük hedefler belirleyin, (2) Başarılarınızı kutlayın, (3) İlham kaynakları bulun, (4) Sosyal destek alın. Yavaş yavaş enerji kazanacaksınız!',
+                'Medium': '🚀 Motivasyon seviyeleriniz orta düzeyde. Bunu artırmak için: (1) Anlamlı hedefler belirleyin, (2) İlerlemenizi takip edin, (3) Kendinizi ödüllendirin, (4) Başkalarıyla paylaşın. Siz yapabilirsiniz!',
+                'High': '🏆 Harika! Yüksek motivasyonla dolu görünüyorsunuz! Bu enerjiyi kullanarak hedeflerinize ulaşın. Başkalarını da ilham verin. Momentum devam ettirin ve başarıya ulaşın!'
+            },
+            'Duygusal Karışıklık': {
+                'Low': '🧘 Duygusal durumunuz net ve dengeli. Harika! Bu netliği korumak için kendinize zaman ayırın ve duygularınızı takip edin. Kendinize güvenin!',
+                'Medium': '🌊 Biraz duygusal karışıklık yaşıyorsunuz. Bu normal. Deneyin: (1) Duygularınızı yazın, (2) Meditasyon yapın, (3) Güvendiğiniz birine konuşun, (4) Zaman ayırın. Netlik kazanacaksınız!',
+                'High': '🧭 Duygusal olarak karışık hissediyorsunuz. Lütfen: (1) Duygularınızı tanıyın, (2) Profesyonel yardım alın, (3) Kendinize şefkat gösterin, (4) Günlük rutinler oluşturun. Netlik kazanacaksınız!'
+            },
+            'Sakin': {
+                'Low': '🍃 Sakinlik seviyeleriniz düşük. Daha fazla huzur bulmak için: (1) Meditasyon yapın, (2) Doğada zaman geçirin, (3) Nefes egzersizleri yapın, (4) Sosyal aktiviteler azaltın. Huzur bulacaksınız!',
+                'Medium': '🌸 Orta düzey sakinlik yaşıyorsunuz. Bunu artırmak için: (1) Günlük meditasyon yapın, (2) Yoga deneyin, (3) Doğada zaman geçirin, (4) Uyku kalitesini iyileştirin. Daha sakin olacaksınız!',
+                'High': '☮️ Harika! Yüksek sakinlik ve huzur içindesiniz. Bu güzel durumu korumak için meditasyon, yoga ve doğa ile bağlantı kurun. Bu huzuru başkalarıyla paylaşın!'
+            }
+        };
+
+        let currentMood = null;
+        let currentResponses = {};
+        let pendingRecord = null; // Onay bekleyen kayıt
+        let userData = {
+            ageRange: null,
+            gender: null,
+            maritalStatus: null,
+            region: null,
+            records: []
+        };
+
+        let moodChart = null;
+        let scoreChart = null;
+
+        // Google Sheets Web App URL
+        const GSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwIbRL8F5208AvI8KSUCwfzCIqzMrqn5M8MUb3uBhPzTYoOBYZhBFnTXekYxv_deY8/exec";
+
+        // Load data from localStorage
+        function loadData() {
+            const saved = localStorage.getItem('feelawareData');
+            if (saved) {
+                userData = JSON.parse(saved);
+                updateProfileDisplay();
+            }
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('feelawareData', JSON.stringify(userData));
+        }
+
+        // Update profile display
+        function updateProfileDisplay() {
+            document.getElementById('profileAge').textContent = userData.ageRange || '-';
+            document.getElementById('profileGender').textContent = userData.gender || '-';
+            document.getElementById('profileMaritalStatus').textContent = userData.maritalStatus || '-';
+            document.getElementById('profileRegion').textContent = userData.region || '-';
+            document.getElementById('totalRecords').textContent = userData.records.length;
+            updateMoodDistribution();
+        }
+
+        // Update mood distribution in settings
+        function updateMoodDistribution() {
+            const container = document.getElementById('moodDistribution');
+            if (userData.records.length === 0) {
+                container.innerHTML = '<div class="info-box">Henüz değerlendirme yapılmamış.</div>';
+                return;
+            }
+
+            const moodCounts = {};
+            userData.records.forEach(r => {
+                moodCounts[r.mood] = (moodCounts[r.mood] || 0) + 1;
+            });
+
+            let html = '<div class="info-box"><strong>Duygu Dağılımı:</strong><br>';
+            for (const [mood, count] of Object.entries(moodCounts)) {
+                html += `${mood}: ${count} değerlendirme<br>`;
+            }
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Validate setup
+        function validateSetup() {
+            const age = document.getElementById('ageRange').value;
+            const gender = document.getElementById('gender').value;
+            const maritalStatus = document.getElementById('maritalStatus').value;
+            const region = document.getElementById('region').value;
+            document.getElementById('startBtn').disabled = !age || !gender || !maritalStatus || !region;
+        }
+
+        // Start app
+        function startApp() {
+            userData.ageRange = document.getElementById('ageRange').value;
+            userData.gender = document.getElementById('gender').value;
+            userData.maritalStatus = document.getElementById('maritalStatus').value;
+            userData.region = document.getElementById('region').value;
+            saveData();
+            updateProfileDisplay();
+            goToDashboard();
+        }
+
+        // Screen navigation
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function goToMoodSelection() {
+            showScreen('moodScreen');
+        }
+
+        function goToDashboard() {
+            showScreen('dashboardScreen');
+            updateDashboard();
+        }
+
+        // Mood selection
+        function selectMood(mood) {
+            currentMood = mood;
+            currentResponses = {};
+            document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('selected'));
+            event.target.classList.add('selected');
+
+            setTimeout(() => {
+                showScreen('scaleScreen');
+                document.getElementById('scaleTitle').textContent = mood + ' - Değerlendirme Ölçekleri';
+                renderScales();
+            }, 300);
+        }
+
+        // Render scales
+        function renderScales() {
+            const container = document.getElementById('scalesContainer');
+            container.innerHTML = '';
+            const moodScales = scales[currentMood] || [];
+
+            moodScales.forEach((scale, scaleIdx) => {
+                const scaleDiv = document.createElement('div');
+                scaleDiv.className = 'scale-container';
+                scaleDiv.innerHTML = `<h3>${scale.name}</h3>`;
+
+                scale.items.forEach((item, itemIdx) => {
+                    const questionId = `s${scaleIdx}_q${itemIdx}`;
+                    const itemDiv = document.createElement('div');
+                    itemDiv.style.marginBottom = '15px';
+                    itemDiv.innerHTML = `<p class="question-text">${itemIdx + 1}. ${item}</p>`;
+
+                    const optionsDiv = document.createElement('div');
+                    optionsDiv.className = 'likert-options';
+
+                    const labels = ['Hiç', 'Az', 'Orta', 'Çok', 'Aşırı'];
+                    for (let i = 1; i <= 5; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'likert-btn';
+                    btn.innerHTML = `${i}<br><small>${labels[i-1]}</small>`;
+                    btn.onclick = () => selectLikert(questionId, i, btn);
+                    btn.setAttribute('data-question', questionId);
+                    optionsDiv.appendChild(btn);
+                    }
+
+                    itemDiv.appendChild(optionsDiv);
+                    scaleDiv.appendChild(itemDiv);
+                });
+
+                container.appendChild(scaleDiv);
+            });
+        }
+
+        // Select Likert response
+        function selectLikert(questionId, value, btn) {
+            document.querySelectorAll(`[data-question="${questionId}"]`).forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            currentResponses[questionId] = value;
+        }
+
+        // Submit scales
+        function submitScales() {
+            const moodScales = scales[currentMood] || [];
+            const totalQuestions = moodScales.reduce((sum, scale) => sum + scale.items.length, 0);
+
+            if (Object.keys(currentResponses).length < totalQuestions) {
+                alert('Lütfen tüm soruları cevaplayın!');
+                return;
+            }
+
+            let totalScore = 0;
+            for (const value of Object.values(currentResponses)) {
+                totalScore += value;
+            }
+
+            const averageScore = totalScore / totalQuestions;
+            const level = averageScore <= 2 ? 'Low' : averageScore <= 3.5 ? 'Medium' : 'High';
+            const feedback = feedbackTexts[currentMood][level];
+
+            // Kaydı oluştur ama henüz kaydetme - onay beklesin
+            pendingRecord = {
+                date: new Date().toLocaleDateString('tr-TR'),
+                time: new Date().toLocaleTimeString('tr-TR'),
+                timestamp: new Date().toISOString(),
+                mood: currentMood,
+                responses: {...currentResponses},
+                totalScore: totalScore,
+                averageScore: averageScore.toFixed(2),
+                score: Math.round(averageScore * 20),
+                level: level,
+                levelText: level === 'Low' ? 'Düşük' : level === 'Medium' ? 'Orta' : 'Yüksek',
+                feedback: feedback
+            };
+
+            // Onay ekranına yönlendir
+            showScreen('consentScreen');
+            document.getElementById('consentStatusMessage').textContent = '';
+        }
+
+        // Submit with consent - Onay verilince Google Sheets'e gönder
+        async function submitWithConsent() {
+            const consentFull = document.getElementById('consentFull');
+            const status = document.getElementById('consentStatusMessage');
+            const button = document.getElementById('consentButton');
+
+            if (!pendingRecord) {
+                status.textContent = '❌ Bir hata oluştu. Lütfen tekrar deneyin.';
+                status.style.color = '#f44336';
+                return;
+            }
+
+            // Butonu devre dışı bırak
+            button.disabled = true;
+            button.textContent = '⏳ Kaydediliyor...';
+            
+            // Her durumda yerel olarak sakla
+            userData.records.push(pendingRecord);
+            saveData();
+            updateProfileDisplay();
+
+            // Google Sheets'e gönder (Eğer kullanıcı onay verdiyse ve URL varsa)
+            if (consentFull.checked && GSHEET_WEBAPP_URL) {
+                status.textContent = 'Onayınız alındı, verileriniz Google Sheets\'e kaydediliyor...';
+                status.style.color = '#667eea';
+
+                try {
+                    const moodScales = scales[currentMood] || [];
+                    const rowsToSend = [];
+
+                    moodScales.forEach((scale, scaleIdx) => {
+                    let scaleScore = 0;
+                    let scaleQuestionCount = 0;
+
+                    for (let itemIdx = 0; itemIdx < scale.items.length; itemIdx++) {
+                    const questionId = `s${scaleIdx}_q${itemIdx}`;
+                    if (pendingRecord.responses[questionId]) {
+                    scaleScore += pendingRecord.responses[questionId];
+                    scaleQuestionCount++;
+                    }
+                    }
+
+                    rowsToSend.push([
+                    pendingRecord.timestamp,
+                    userData.ageRange,
+                    userData.gender,
+                    userData.maritalStatus,
+                    userData.region,
+                    scale.name,
+                    currentMood,
+                    scaleScore
+                    ]);
+                    });
+
+                    await fetch(GSHEET_WEBAPP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(rowsToSend)
+                    });
+
+                    status.textContent = '✅ Teşekkürler! Yanıtlarınız başarıyla kaydedildi.';
+                    status.style.color = '#4caf50';
+                } catch (e) {
+                    console.error('Google Sheets gönderim hatası:', e);
+                    status.textContent = '⚠️ Veriler gönderilemedi ancak bu cihaza kaydedildi.';
+                    status.style.color = '#ff9800';
+                }
+            } else {
+                status.textContent = '✅ Yanıtlarınız bu cihaza kaydedildi.';
+                status.style.color = '#4caf50';
+            }
+
+            // Sonuç ekranına geç
+            const recordToShow = {...pendingRecord};
+            setTimeout(() => {
+                showResult(recordToShow);
+                pendingRecord = null;
+                button.disabled = false;
+                button.textContent = '✅ Seçimi Onayla ve Devam Et';
+            }, 1500);
+        }
+
+        // Show result
+        function showResult(record) {
+            showScreen('resultScreen');
+            
+            // Emoji seçimi
+            const emojiMap = {
+                'Low': '😊',
+                'Medium': '😐',
+                'High': '😟'
+            };
+            const emoji = emojiMap[record.level] || '😊';
+            
+            // Seviye metni ve badge rengi
+            const levelInfo = {
+                'Low': { text: 'Düşük Seviye', icon: '✅' },
+                'Medium': { text: 'Orta Seviye', icon: '⚠️' },
+                'High': { text: 'Yüksek Seviye', icon: '🔴' }
+            };
+            const levelData = levelInfo[record.level] || levelInfo['Low'];
+            
+            // Result card'ı güncelle
+            const resultCard = document.querySelector('#resultScreen .result-card');
+            resultCard.innerHTML = `
+                <div class="result-score-wrapper">
+                    <div class="result-emoji">${emoji}</div>
+                    <h2>${record.score}/100</h2>
+                    <p>${record.mood}</p>
+                    <div class="result-level-badge">${levelData.icon} ${levelData.text}</div>
+                </div>
+            `;
+
+            const feedbackContainer = document.getElementById('feedbackContainer');
+            feedbackContainer.innerHTML = `
+                <div class="feedback-section">
+                    <h3>💡 Motivasyonel Rehberlik</h3>
+                    <p>${record.feedback}</p>
+                </div>
+                <div class="feedback-section">
+                    <h3>📊 Değerlendirme Detayları</h3>
+                    <p style="margin-bottom: 15px;"><strong>Duygu Durumu:</strong> ${record.mood}</p>
+                    <div class="detail-grid">
+                    <div class="detail-item">
+                    <div class="detail-label">Toplam Puan</div>
+                    <div class="detail-value">${record.totalScore}/${Object.keys(record.responses).length * 5}</div>
+                    </div>
+                    <div class="detail-item">
+                    <div class="detail-label">Ortalama</div>
+                    <div class="detail-value">${record.averageScore}/5.00</div>
+                    </div>
+                    <div class="detail-item">
+                    <div class="detail-label">Tarih</div>
+                    <div class="detail-value" style="font-size: 13px;">${record.date}</div>
+                    </div>
+                    <div class="detail-item">
+                    <div class="detail-label">Saat</div>
+                    <div class="detail-value" style="font-size: 13px;">${record.time}</div>
+                    </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Generate PDF
+        function generatePDF() {
+            const record = userData.records[userData.records.length - 1];
+            const element = document.createElement('div');
+            element.style.padding = '20px';
+            element.style.fontFamily = 'Arial, sans-serif';
+            element.innerHTML = `
+                <h1 style="color: #667eea; text-align: center;">FeelAware Değerlendirme Raporu</h1>
+                <p style="text-align: center; color: #999; margin-bottom: 20px;">Eğitim Amaçlı Prototip</p>
+
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p><strong>Tarih:</strong> ${record.date} ${record.time}</p>
+                    <p><strong>Değerlendirilen Duygu Durumu:</strong> ${record.mood}</p>
+                    <p><strong>Puan:</strong> ${record.score}/100</p>
+                    <p><strong>Seviye:</strong> ${record.levelText}</p>
+                    <p><strong>Ortalama Skor:</strong> ${record.averageScore}/5.00</p>
+                </div>
+
+                <h2 style="color: #667eea; margin-top: 20px;">Motivasyonel Rehberlik</h2>
+                <p style="line-height: 1.6;">${record.feedback}</p>
+
+                <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-top: 20px; border-radius: 6px;">
+                    <p style="font-size: 12px; color: #856404;">
+                    <strong>⚠️ Yasal Uyarı:</strong> Bu rapor eğitim amaçlı bir prototip uygulamasından oluşturulmuştur. Klinik tanı koymaz, tedavi önerileri sunmaz ve profesyonel psikolojik danışmanlığın yerine geçmez. Ciddi psikolojik sorunlar yaşıyorsanız lütfen bir uzman danışmanla iletişime geçiniz.
+                    </p>
+                </div>
+            `;
+
+            html2pdf().set({
+                margin: 10,
+                filename: `FeelAware_Rapor_${record.date.replace(/\./g, '-')}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+            }).from(element).save();
+        }
+
+        // Dashboard
+        function updateDashboard() {
+            updateOverview();
+            updateHistory();
+        }
+
+        function updateOverview() {
+            const container = document.getElementById('overviewContent');
+            if (userData.records.length === 0) {
+                container.innerHTML = '<div class="empty-state">Henüz değerlendirme yapılmamış. Yeni bir değerlendirme başlatın!</div>';
+                return;
+            }
+
+            const lastRecord = userData.records[userData.records.length - 1];
+            container.innerHTML = `
+                <div class="result-card">
+                    <h2>${lastRecord.score}/100</h2>
+                    <p>${lastRecord.mood} - ${lastRecord.date}</p>
+                </div>
+                <div class="feedback-section">
+                    <h3>Son Değerlendirme</h3>
+                    <p><strong>Duygu Durumu:</strong> ${lastRecord.mood}</p>
+                    <p><strong>Puan:</strong> ${lastRecord.score}/100</p>
+                    <p><strong>Seviye:</strong> ${lastRecord.levelText}</p>
+                    <p><strong>Tarih:</strong> ${lastRecord.date} ${lastRecord.time}</p>
+                </div>
+                <div class="data-stats">
+                    <h4>${userData.records.length}</h4>
+                    <p>Toplam Değerlendirme</p>
+                </div>
+            `;
+        }
+
+        function updateHistory() {
+            const container = document.getElementById('historyContent');
+            if (userData.records.length === 0) {
+                container.innerHTML = '<div class="empty-state">Henüz değerlendirme yapılmamış.</div>';
+                return;
+            }
+
+            container.innerHTML = userData.records.slice().reverse().map((record, idx) => `
+                <div class="history-item">
+                    <div class="history-item-info">
+                    <div class="history-item-mood">${record.mood}</div>
+                    <div class="history-item-date">${record.date} ${record.time}</div>
+                    </div>
+                    <div class="history-item-score">${record.score}</div>
+                </div>
+            `).join('');
+        }
+
+        function updateCharts() {
+            const container = document.getElementById('chartsContent');
+
+            if (userData.records.length === 0) {
+                container.innerHTML = '<div class="empty-state">📊 Grafik görmek için en az 1 değerlendirme yapmalısınız.</div>';
+                return;
+            }
+
+            // Clear previous charts
+            if (moodChart) moodChart.destroy();
+            if (scoreChart) scoreChart.destroy();
+
+            container.innerHTML = `
+                <div class="chart-container">
+                    <div class="chart-title">📊 Duygulara Göre Değerlendirme Dağılımı</div>
+                    <canvas id="moodChartCanvas"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">📈 Zaman İçinde Puan Trendi</div>
+                    <canvas id="scoreChartCanvas"></canvas>
+                </div>
+            `;
+
+            // Mood distribution chart
+            const moodCounts = {};
+            userData.records.forEach(r => {
+                moodCounts[r.mood] = (moodCounts[r.mood] || 0) + 1;
+            });
+
+            const moodCtx = document.getElementById('moodChartCanvas').getContext('2d');
+            moodChart = new Chart(moodCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(moodCounts),
+                    datasets: [{
+                    data: Object.values(moodCounts),
+                    backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe', '#43e97b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                    legend: {
+                    position: 'bottom',
+                    labels: {
+                    padding: 10,
+                    font: { size: 11 }
+                    }
+                    }
+                    }
+                }
+            });
+
+            // Score trend chart
+            const scoreCtx = document.getElementById('scoreChartCanvas').getContext('2d');
+            scoreChart = new Chart(scoreCtx, {
+                type: 'line',
+                data: {
+                    labels: userData.records.map((r, i) => `${i + 1}. ${r.date}`),
+                    datasets: [{
+                    label: 'Puan Trendi',
+                    data: userData.records.map(r => r.score),
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                    legend: {
+                    display: true,
+                    position: 'top'
+                    }
+                    },
+                    scales: {
+                    y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                    stepSize: 20
+                    }
+                    }
+                    }
+                }
+            });
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tab + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+
+            if (tab === 'charts') {
+                updateCharts();
+            }
+        }
+
+        // Settings
+        function openSettings() {
+            updateProfileDisplay();
+            document.getElementById('settingsModal').classList.add('active');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            document.getElementById('darkModeToggle').classList.toggle('active');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        
+        function changeProfileField(field) {
+            let newValue = "";
+            let options = "";
+
+            if (field === 'ageRange') {
+                options = "13-17, 18-25, 26-35, 36-50, 50+";
+                newValue = prompt(`Yeni yaş aralığını girin (${options}):`, userData.ageRange);
+                if (newValue && !["13-17", "18-25", "26-35", "36-50", "50+"].includes(newValue)) {
+                    alert("Lütfen geçerli bir yaş aralığı girin.");
+                    return;
+                }
+            } else if (field === 'gender') {
+                options = "Erkek, Kadın, Diğer, Belirtmek İstemiyorum";
+                newValue = prompt(`Yeni cinsiyet bilgisini girin (${options}):`, userData.gender);
+                if (newValue && !["Erkek", "Kadın", "Diğer", "Belirtmek İstemiyorum"].includes(newValue)) {
+                    alert("Lütfen geçerli bir cinsiyet girin.");
+                    return;
+                }
+            } else if (field === 'maritalStatus') {
+                options = "Bekar, İlişkisi Var, Evli, Boşanmış, Dul, Belirtmek İstemiyorum";
+                newValue = prompt(`Yeni medeni hal bilgisini girin (${options}):`, userData.maritalStatus);
+                if (newValue && !["Bekar", "İlişkisi Var", "Evli", "Boşanmış", "Dul", "Belirtmek İstemiyorum"].includes(newValue)) {
+                    alert("Lütfen geçerli bir medeni hal girin.");
+                    return;
+                }
+            } else if (field === 'region') {
+                options = "Marmara, Ege, Akdeniz, İç Anadolu, Karadeniz, Doğu Anadolu, Güneydoğu Anadolu";
+                newValue = prompt(`Yeni bölge bilgisini girin (${options}):`, userData.region);
+                if (newValue && !["Marmara", "Ege", "Akdeniz", "İç Anadolu", "Karadeniz", "Doğu Anadolu", "Güneydoğu Anadolu"].includes(newValue)) {
+                    alert("Lütfen geçerli bir bölge girin.");
+                    return;
+                }
+            }
+
+            if (newValue) {
+                userData[field] = newValue;
+                saveData();
+                updateProfileDisplay();
+                alert("Profil bilgisi güncellendi.");
+            }
+        }
+
+        function editProfile() {
+            const ageOptions = ['13-17', '18-25', '26-35', '36-50', '50+'];
+            const newAge = prompt('Yeni yaş aralığı seçin (13-17, 18-25, 26-35, 36-50, 50+):', userData.ageRange);
+            if (newAge && ageOptions.includes(newAge)) {
+                userData.ageRange = newAge;
+                saveData();
+                updateProfileDisplay();
+            } else if (newAge) {
+                alert('Geçersiz yaş aralığı. Lütfen listeden birini seçin.');
+            }
+        }
+
+        // Export JSON
+        function exportJSON() {
+            if (userData.records.length === 0) {
+                alert('İndirilecek veri yok. Önce en az bir değerlendirme yapın.');
+                return;
+            }
+
+            const dataStr = JSON.stringify(userData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `feelaware_data_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            alert('JSON dosyası indirildi! Python/R ile analiz edebilirsiniz.');
+        }
+
+        // Export CSV
+        function exportCSV() {
+            if (userData.records.length === 0) {
+                alert('İndirilecek veri yok. Önce en az bir değerlendirme yapın.');
+                return;
+            }
+
+            let csv = 'Tarih,Saat,Timestamp,Yas_Araligi,Cinsiyet,Duygu_Durumu,';
+
+            // Add question headers
+            const firstRecord = userData.records[0];
+            const questionCount = Object.keys(firstRecord.responses).length;
+            for (let i = 0; i < questionCount; i++) {
+                csv += `Soru_${i + 1},`;
+            }
+            csv += 'Toplam_Puan,Ortalama_Skor,Yuzdelik_Puan,Seviye,Seviye_Metin,Geri_Bildirim\n';
+
+            // Add data rows
+            userData.records.forEach(record => {
+                csv += `${record.date},${record.time},${record.timestamp},${userData.ageRange},${userData.gender},${record.mood},`;
+
+                // Add responses
+                for (const value of Object.values(record.responses)) {
+                    csv += `${value},`;
+                }
+
+                csv += `${record.totalScore},${record.averageScore},${record.score},${record.level},${record.levelText},"${record.feedback.replace(/"/g, '""')}"\n`;
+            });
+
+            const csvBlob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(csvBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `feelaware_data_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            alert('CSV dosyası indirildi! Excel/SPSS ile açabilirsiniz.');
+        }
+
+        function clearAllData() {
+            if (confirm('⚠️ Tüm verileri silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) {
+                if (confirm('Son kez soruyorum: Tüm değerlendirme kayıtlarınız silinecek. Devam edilsin mi?')) {
+                    userData.records = [];
+                    saveData();
+                    updateProfileDisplay();
+                    updateDashboard();
+                    closeSettings();
+                    alert('✅ Tüm veriler silindi.');
+                }
+            }
+        }
+
+        function resetProfile() {
+            if (!confirm('⚠️ Profilinizi ve tüm kayıtlı verilerinizi sıfırlamak istiyor musunuz?')) return;
+            if (!confirm('Son onay: Tüm değerlendirme kayıtları silinecek. Devam edilsin mi?')) return;
+
+            localStorage.removeItem('feelawareData');
+            userData = {
+                ageRange: null,
+                gender: null,
+                maritalStatus: null,
+                region: null,
+                records: []
+            };
+
+            // Reset setup form UI
+            const ids = ['ageRange','gender','maritalStatus','region'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            validateSetup();
+
+            closeSettings();
+            showScreen('setupScreen');
+            alert('✅ Profil sıfırlandı.');
+        }
+
+
+        // Initialize
+        loadData();
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('darkModeToggle').classList.add('active');
+        }
+
+        // Check if user has data and redirect
+        window.onload = function() {
+            loadData();
+            if (userData.ageRange && userData.gender && userData.maritalStatus && userData.region) {
+                console.log("Profil bulundu, panele yönlendiriliyor...");
+                goToDashboard();
+            } else {
+                console.log("Profil eksik, kurulum ekranı gösteriliyor.");
+                showScreen('setupScreen');
+            }
+        };
+    </script>
+</body>
+</html>
